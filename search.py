@@ -72,27 +72,41 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
+def genericSearch(problem, frontier, search_type):
+    node = [problem.getStartState(), [], 0]  # [position, directions history, cost]
+    frontier.push(node)
+    explored_positions = set()
+
+    # import pdb; pdb.set_trace()
+    while not frontier.isEmpty():
+        node = frontier.pop()
+        explored_positions.add(node[0])
+        if problem.isGoalState(node[0]): return node[1] # return directions history
+        for successor_node in problem.getSuccessors(node[0]):
+            if (successor_node[0] in explored_positions) or \
+                    (nodeInFrontier(successor_node[0], frontier) and search_type != "dfs"): continue
+            next_node = [successor_node[0], node[1] + [successor_node[1]], node[2] + successor_node[2]]
+            frontier.push(next_node)
+    return [] # return empty directions history
+
+def nodeInFrontier(node, frontier):
+    nodes_in_frontier = list(map(lambda node_in_frontier: node_in_frontier[0], frontier.list))
+    return node in nodes_in_frontier
+
 def depthFirstSearch(problem):
     """
     Search the deepest nodes in the search tree first.
 
     Your search algorithm needs to return a list of actions that reaches the
     goal. Make sure to implement a graph search algorithm.
-
-    To get started, you might want to try some of these simple commands to
-    understand the search problem that is being passed in:
-
-    print "Start:", problem.getStartState()
-    print "Is the start a goal?", problem.isGoalState(problem.getStartState())
-    print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    frontier = util.Stack()
+    return genericSearch(problem, frontier, 'dfs')
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    frontier = util.Queue()
+    return genericSearch(problem, frontier, 'bfs')
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
