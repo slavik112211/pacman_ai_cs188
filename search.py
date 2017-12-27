@@ -20,13 +20,13 @@ Pacman agents (in searchAgents.py).
 import util
 
 class Node:
-    def __init__(self, position, directions, cost):
-        self.position = position
+    def __init__(self, state, directions, cost):
+        self.state = state
         self.directions = directions
         self.cost = cost
 
     def __eq__(self, other):
-        return self.position == other.position
+        return self.state == other.state
 
 def nullHeuristic(state, problem=None):
     """
@@ -105,30 +105,30 @@ def tinyMazeSearch(problem):
 
 def genericSearch(problem, frontier, search_type, heuristic=nullHeuristic):
     node = Node(problem.getStartState(), [], 0)
-    explored_positions = set()
+    explored_states = set()
 
     if search_type == "ucs": frontier.push(node, node.cost)
-    elif search_type == "A*": frontier.push(node, node.cost + heuristic(node.position, problem))
+    elif search_type == "A*": frontier.push(node, node.cost + heuristic(node.state, problem))
     else: frontier.push(node)
 
     # import pdb; pdb.set_trace()
     while not frontier.isEmpty():
         node = frontier.pop()
-        explored_positions.add(node.position)
-        if problem.isGoalState(node.position): return node.directions
-        for successor_node in problem.getSuccessors(node.position):
-            if (successor_node[0] in explored_positions) or \
+        explored_states.add(node.state)
+        if problem.isGoalState(node.state): return node.directions
+        for successor_node in problem.getSuccessors(node.state):
+            if (successor_node[0] in explored_states) or \
                     (search_type == "bfs" and nodeInFrontier(successor_node[0], frontier)): continue
             next_node = Node(successor_node[0], node.directions + [successor_node[1]], node.cost + successor_node[2])
 
             if search_type == "ucs": frontier.update(next_node, next_node.cost)
-            elif search_type == "A*": frontier.update(next_node, next_node.cost + heuristic(next_node.position, problem))
+            elif search_type == "A*": frontier.update(next_node, next_node.cost + heuristic(next_node.state, problem))
             else: frontier.push(next_node)
 
     return [] # return empty directions history
 
 def nodeInFrontier(node, frontier):
-    nodes_in_frontier = list(map(lambda node: node.position, frontier.list))
+    nodes_in_frontier = list(map(lambda node: node.state, frontier.list))
     return node in nodes_in_frontier
 
 def depthFirstSearch(problem):
