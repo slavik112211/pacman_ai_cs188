@@ -19,6 +19,15 @@ Pacman agents (in searchAgents.py).
 
 import util
 
+class Node:
+    def __init__(self, position, directions, cost):
+        self.position = position
+        self.directions = directions
+        self.cost = cost
+
+    def __eq__(self, other):
+        return self.position == other.position
+
 class SearchProblem:
     """
     This class outlines the structure of a search problem, but doesn't implement
@@ -73,24 +82,24 @@ def tinyMazeSearch(problem):
     return  [s, s, w, s, w, w, s, w]
 
 def genericSearch(problem, frontier, search_type):
-    node = [problem.getStartState(), [], 0]  # [position, directions history, cost]
-    frontier.push(node)
+    node = Node(problem.getStartState(), [], 0)
+    frontier.push(node) if search_type != "ucs" else frontier.push(node, node.cost)
     explored_positions = set()
 
     # import pdb; pdb.set_trace()
     while not frontier.isEmpty():
         node = frontier.pop()
-        explored_positions.add(node[0])
-        if problem.isGoalState(node[0]): return node[1] # return directions history
-        for successor_node in problem.getSuccessors(node[0]):
+        explored_positions.add(node.position)
+        if problem.isGoalState(node.position): return node.directions
+        for successor_node in problem.getSuccessors(node.position):
             if (successor_node[0] in explored_positions) or \
-                    (nodeInFrontier(successor_node[0], frontier) and search_type != "dfs"): continue
-            next_node = [successor_node[0], node[1] + [successor_node[1]], node[2] + successor_node[2]]
-            frontier.push(next_node)
+                    (search_type == "bfs" and nodeInFrontier(successor_node[0], frontier)): continue
+            next_node = Node(successor_node[0], node.directions + [successor_node[1]], node.cost + successor_node[2])
+            frontier.push(next_node) if search_type != "ucs" else frontier.update(next_node, next_node.cost)
     return [] # return empty directions history
 
 def nodeInFrontier(node, frontier):
-    nodes_in_frontier = list(map(lambda node_in_frontier: node_in_frontier[0], frontier.list))
+    nodes_in_frontier = list(map(lambda node: node.position, frontier.list))
     return node in nodes_in_frontier
 
 def depthFirstSearch(problem):
@@ -110,8 +119,8 @@ def breadthFirstSearch(problem):
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    frontier = util.PriorityQueue()
+    return genericSearch(problem, frontier, 'ucs')
 
 def nullHeuristic(state, problem=None):
     """
