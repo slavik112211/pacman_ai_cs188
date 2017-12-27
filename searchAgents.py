@@ -323,7 +323,6 @@ class CornersProblem(search.SearchProblem):
         """
         Returns successor states, the actions they require, and a cost of 1.
         """
-
         successors = []
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
             x,y = state.position
@@ -331,8 +330,7 @@ class CornersProblem(search.SearchProblem):
             nextx, nexty = int(x + dx), int(y + dy)
             if not self.walls[nextx][nexty]:
                 nextState = CornersGameState((nextx, nexty), None, state)
-                cost = 1 #self.costFn(nextState)
-                successors.append( ( nextState, action, cost) )
+                successors.append( ( nextState, action, 1) )
 
         self._expanded += 1 # DO NOT CHANGE
         return successors
@@ -363,15 +361,39 @@ def cornersHeuristic(state, problem):
     This function should always return a number that is a lower bound on the
     shortest path from the state to a goal of the problem; i.e.  it should be
     admissible (as well as consistent).
-    """
     corners = problem.corners # These are the corner coordinates
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
-    "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+    Heuristic idea:
+        1. add (manhattan) distance to the closest corner from current pacman position,
+        2. add (manhattan) distances to each remaining corners (going to closest first) from the previous corner.
+
+        This is a relaxed version of the original problem: such heuristic would be a true minimum cost to visit all
+        4 (or all remaining) corners, if there would be no walls, that Pacman has to go around.
+        Thus such heuristic provides strictly smaller value for path cost, than a true value of the shortest path cost.
+    """
+    cornersToVisit = list(state.cornersToVisit)
+    startingPosition = state.position
+    heuristicDistance = 0
+
+    while len(cornersToVisit) != 0:
+        minDistance = 999999; minIndex = -1
+        for index, corner in enumerate(cornersToVisit):
+            distance = manhattanDistance(startingPosition, corner)
+            if(distance < minDistance):
+                minDistance = distance
+                minIndex = index
+
+        startingPosition = cornersToVisit.pop(minIndex)
+        heuristicDistance += minDistance
+
+    return heuristicDistance
+
+def manhattanDistance(point1, point2):
+    return abs(point1[0] - point2[0]) + abs(point1[1] - point2[1])
 
 class AStarCornersAgent(SearchAgent):
-    "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
+    "A SearchAgent for CornersProblem using A* and your cornersHeuristic"
     def __init__(self):
         self.searchFunction = lambda prob: search.aStarSearch(prob, cornersHeuristic)
         self.searchType = CornersProblem

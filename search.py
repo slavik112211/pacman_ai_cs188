@@ -51,6 +51,17 @@ def nullHeuristic(state, problem=None):
 6. python pacman.py -l openMaze -z .5 -p SearchAgent -a fn=breadthFirstSearch
 
 7. python pacman.py -l mediumCorners -p SearchAgent -a fn=bfs,prob=CornersProblem
+   Search nodes expanded: 1966
+8. python pacman.py -l mediumCorners -p SearchAgent -a fn=aStarSearch,prob=CornersProblem,heuristic=cornersHeuristic -z 0.5
+   Search nodes expanded: 692
+9. python pacman.py -l bigCorners -p SearchAgent -a fn=bfs,prob=CornersProblem -z 0.5
+   Path found with total cost of 162 in 0.4 seconds
+   Search nodes expanded: 7949
+   Pacman emerges victorious! Score: 378
+10.python pacman.py -l bigCorners -p SearchAgent -a fn=aStarSearch,prob=CornersProblem,heuristic=cornersHeuristic -z 0.5
+   Path found with total cost of 162 in 0.1 seconds
+   Search nodes expanded: 1726
+   Pacman emerges victorious! Score: 378
 """
 class SearchProblem:
     """
@@ -108,10 +119,7 @@ def tinyMazeSearch(problem):
 def genericSearch(problem, frontier, search_type, heuristic=nullHeuristic):
     node = Node(problem.getStartState(), [], 0)
     explored_states = set()
-
-    if search_type == "ucs": frontier.push(node, node.cost)
-    elif search_type == "A*": frontier.push(node, node.cost + heuristic(node.state, problem))
-    else: frontier.push(node)
+    insertNodeIntoFrontier(node, problem, frontier, search_type, heuristic)
 
     # import pdb; pdb.set_trace()
     while not frontier.isEmpty():
@@ -122,16 +130,18 @@ def genericSearch(problem, frontier, search_type, heuristic=nullHeuristic):
             if (successor_node[0] in explored_states) or \
                     (search_type == "bfs" and nodeInFrontier(successor_node[0], frontier)): continue
             next_node = Node(successor_node[0], node.directions + [successor_node[1]], node.cost + successor_node[2])
-
-            if search_type == "ucs": frontier.update(next_node, next_node.cost)
-            elif search_type == "A*": frontier.update(next_node, next_node.cost + heuristic(next_node.state, problem))
-            else: frontier.push(next_node)
+            insertNodeIntoFrontier(next_node, problem, frontier, search_type, heuristic)
 
     return [] # return empty directions history
 
 def nodeInFrontier(node, frontier):
     nodes_in_frontier = list(map(lambda node: node.state, frontier.list))
     return node in nodes_in_frontier
+
+def insertNodeIntoFrontier(node, problem, frontier, search_type, heuristic):
+    if search_type == "ucs": frontier.update(node, node.cost)
+    elif search_type == "A*": frontier.update(node, node.cost + heuristic(node.state, problem))
+    else: frontier.push(node)
 
 def depthFirstSearch(problem):
     """Search the deepest nodes in the search tree first."""
