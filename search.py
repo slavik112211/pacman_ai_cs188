@@ -49,6 +49,8 @@ def nullHeuristic(state, problem=None):
 4. python pacman.py -l openMaze -z .5 -p StayEastSearchAgent
 5. python pacman.py -l openMaze -z .5 -p StayWestSearchAgent
 6. python pacman.py -l openMaze -z .5 -p SearchAgent -a fn=breadthFirstSearch
+
+7. python pacman.py -l mediumCorners -p SearchAgent -a fn=bfs,prob=CornersProblem
 """
 class SearchProblem:
     """
