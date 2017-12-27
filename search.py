@@ -28,6 +28,28 @@ class Node:
     def __eq__(self, other):
         return self.position == other.position
 
+def nullHeuristic(state, problem=None):
+    """
+    A heuristic function estimates the cost from the current state to the nearest
+    goal in the provided SearchProblem.  This heuristic is trivial.
+    """
+    return 0
+
+"""
+1. python pacman.py -l bigMaze -z .5 -p SearchAgent -a fn=astar,heuristic=manhattanHeuristic
+   Path found with total cost of 210 in 0.0 seconds
+   Search nodes expanded: 549
+2. python pacman.py -l bigMaze -z .5 -p SearchAgent -a fn=astar,heuristic=euclideanHeuristic
+   Path found with total cost of 210 in 0.0 seconds
+   Search nodes expanded: 557
+3. python pacman.py -l bigMaze -z .5 -p SearchAgent -a fn=uniformCostSearch
+   Path found with total cost of 210 in 0.0 seconds
+   Search nodes expanded: 620
+
+4. python pacman.py -l openMaze -z .5 -p StayEastSearchAgent
+5. python pacman.py -l openMaze -z .5 -p StayWestSearchAgent
+6. python pacman.py -l openMaze -z .5 -p SearchAgent -a fn=breadthFirstSearch
+"""
 class SearchProblem:
     """
     This class outlines the structure of a search problem, but doesn't implement
@@ -81,10 +103,13 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
-def genericSearch(problem, frontier, search_type):
+def genericSearch(problem, frontier, search_type, heuristic=nullHeuristic):
     node = Node(problem.getStartState(), [], 0)
-    frontier.push(node) if search_type != "ucs" else frontier.push(node, node.cost)
     explored_positions = set()
+
+    if search_type == "ucs": frontier.push(node, node.cost)
+    elif search_type == "A*": frontier.push(node, node.cost + heuristic(node.position, problem))
+    else: frontier.push(node)
 
     # import pdb; pdb.set_trace()
     while not frontier.isEmpty():
@@ -95,7 +120,11 @@ def genericSearch(problem, frontier, search_type):
             if (successor_node[0] in explored_positions) or \
                     (search_type == "bfs" and nodeInFrontier(successor_node[0], frontier)): continue
             next_node = Node(successor_node[0], node.directions + [successor_node[1]], node.cost + successor_node[2])
-            frontier.push(next_node) if search_type != "ucs" else frontier.update(next_node, next_node.cost)
+
+            if search_type == "ucs": frontier.update(next_node, next_node.cost)
+            elif search_type == "A*": frontier.update(next_node, next_node.cost + heuristic(next_node.position, problem))
+            else: frontier.push(next_node)
+
     return [] # return empty directions history
 
 def nodeInFrontier(node, frontier):
@@ -103,12 +132,7 @@ def nodeInFrontier(node, frontier):
     return node in nodes_in_frontier
 
 def depthFirstSearch(problem):
-    """
-    Search the deepest nodes in the search tree first.
-
-    Your search algorithm needs to return a list of actions that reaches the
-    goal. Make sure to implement a graph search algorithm.
-    """
+    """Search the deepest nodes in the search tree first."""
     frontier = util.Stack()
     return genericSearch(problem, frontier, 'dfs')
 
@@ -122,18 +146,10 @@ def uniformCostSearch(problem):
     frontier = util.PriorityQueue()
     return genericSearch(problem, frontier, 'ucs')
 
-def nullHeuristic(state, problem=None):
-    """
-    A heuristic function estimates the cost from the current state to the nearest
-    goal in the provided SearchProblem.  This heuristic is trivial.
-    """
-    return 0
-
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
-
+    frontier = util.PriorityQueue()
+    return genericSearch(problem, frontier, 'A*', heuristic)
 
 # Abbreviations
 bfs = breadthFirstSearch
