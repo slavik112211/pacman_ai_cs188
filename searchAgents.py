@@ -385,8 +385,8 @@ def minDistanceToVisitAListOfPoints(points, position, problem=None):
     totalDistance = 0
     if(len(points) == 0): return totalDistance
 
-    cacheKey= str(position) + str(points)
-    # # import hashlib; cacheKey = hashlib.md5(str(position) + str(points)).hexdigest()[:9]
+    cacheKey = str(position) + str(points)
+    # import hashlib; cacheKey = hashlib.md5(str(position) + str(points)).hexdigest()[:9]
     if(problem and (cacheKey in problem.heuristicInfo)):
         # problem.cacheCounter['read'] += 1
         return problem.heuristicInfo[cacheKey]
@@ -401,7 +401,7 @@ def minDistanceToVisitAListOfPoints(points, position, problem=None):
     position = points.pop(minIndex)
     totalDistance = minDistance + minDistanceToVisitAListOfPoints(points, position, problem)
     if(problem):
-    #     problem.cacheCounter['write'] += 1
+        # problem.cacheCounter['write'] += 1
         problem.heuristicInfo[cacheKey]= totalDistance
 
     return totalDistance
@@ -555,9 +555,7 @@ class ClosestDotSearchAgent(SearchAgent):
         food = gameState.getFood()
         walls = gameState.getWalls()
         problem = AnyFoodSearchProblem(gameState)
-
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return search.aStarSearch(problem)
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -591,9 +589,7 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         complete the problem definition.
         """
         x,y = state
-
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.food[x][y]
 
 def mazeDistance(point1, point2, gameState):
     """
