@@ -62,6 +62,13 @@ def nullHeuristic(state, problem=None):
    Path found with total cost of 162 in 0.1 seconds
    Search nodes expanded: 1726
    Pacman emerges victorious! Score: 378
+   
+11. python pacman.py -l trickySearch -p SearchAgent -a fn=bfs,prob=FoodSearchProblem -z 0.5
+    Path found with total cost of 60 in 3.6 seconds
+    Search nodes expanded: 16688
+12. python pacman.py -l trickySearch -p AStarFoodSearchAgent
+    Path found with total cost of 60 in 4.4 seconds
+    Search nodes expanded: 6808
 """
 class SearchProblem:
     """
@@ -161,7 +168,10 @@ def uniformCostSearch(problem):
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     frontier = util.PriorityQueue()
-    return genericSearch(problem, frontier, 'A*', heuristic)
+    # import cProfile; pr = cProfile.Profile(); pr.enable()
+    path = genericSearch(problem, frontier, 'A*', heuristic)
+    # pr.disable(); pr.dump_stats("searchStats")
+    return path
 
 # Abbreviations
 bfs = breadthFirstSearch

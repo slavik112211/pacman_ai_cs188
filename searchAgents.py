@@ -116,6 +116,7 @@ class SearchAgent(Agent):
         totalCost = problem.getCostOfActions(self.actions)
         print('Path found with total cost of %d in %.1f seconds' % (totalCost, time.time() - starttime))
         if '_expanded' in dir(problem): print('Search nodes expanded: %d' % problem._expanded)
+        if hasattr(problem, 'cacheCounter'): print('Cache writes/reads: %d/%d' % (problem.cacheCounter['write'], problem.cacheCounter['read']))
 
     def getAction(self, state):
         """
@@ -273,7 +274,7 @@ class CornersGameState:
                 self.cornersToVisit = cornersToVisit
             else:
                 self.position = position
-                self.cornersToVisit = list(prevState.cornersToVisit)
+                self.cornersToVisit = list(prevState.cornersToVisit) # list() to copy the object
                 if position in self.cornersToVisit: self.cornersToVisit.remove(position)
 
     def __eq__(self, other):
@@ -370,27 +371,40 @@ def cornersHeuristic(state, problem):
 
         This is a relaxed version of the original problem: such heuristic would be a true minimum cost to visit all
         4 (or all remaining) corners, if there would be no walls, that Pacman has to go around.
-        Thus such heuristic provides strictly smaller value for path cost, than a true value of the shortest path cost.
+        Thus such heuristic provides strictly smaller value for path cost,
+        than a true value of the shortest path cost (is admissible). It's also consistent, since
+        triangular inequality always holds.
     """
-    cornersToVisit = list(state.cornersToVisit)
-    startingPosition = state.position
-    heuristicDistance = 0
-
-    while len(cornersToVisit) != 0:
-        minDistance = 999999; minIndex = -1
-        for index, corner in enumerate(cornersToVisit):
-            distance = manhattanDistance(startingPosition, corner)
-            if(distance < minDistance):
-                minDistance = distance
-                minIndex = index
-
-        startingPosition = cornersToVisit.pop(minIndex)
-        heuristicDistance += minDistance
-
+    heuristicDistance = minDistanceToVisitAListOfPoints(list(state.cornersToVisit), state.position)
     return heuristicDistance
 
 def manhattanDistance(point1, point2):
     return abs(point1[0] - point2[0]) + abs(point1[1] - point2[1])
+
+def minDistanceToVisitAListOfPoints(points, position, problem=None):
+    totalDistance = 0
+    if(len(points) == 0): return totalDistance
+
+    cacheKey= str(position) + str(points)
+    # # import hashlib; cacheKey = hashlib.md5(str(position) + str(points)).hexdigest()[:9]
+    if(problem and (cacheKey in problem.heuristicInfo)):
+        # problem.cacheCounter['read'] += 1
+        return problem.heuristicInfo[cacheKey]
+
+    minDistance = 999999; minIndex = -1
+    for index, corner in enumerate(points):
+        distance = manhattanDistance(position, corner)
+        if(distance < minDistance):
+            minDistance = distance
+            minIndex = index
+
+    position = points.pop(minIndex)
+    totalDistance = minDistance + minDistanceToVisitAListOfPoints(points, position, problem)
+    if(problem):
+    #     problem.cacheCounter['write'] += 1
+        problem.heuristicInfo[cacheKey]= totalDistance
+
+    return totalDistance
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for CornersProblem using A* and your cornersHeuristic"
@@ -413,6 +427,7 @@ class FoodSearchProblem:
         self.startingGameState = startingGameState
         self._expanded = 0 # DO NOT CHANGE
         self.heuristicInfo = {} # A dictionary for the heuristic to store information
+        self.cacheCounter = util.Counter()
 
     def getStartState(self):
         return self.start
@@ -481,10 +496,37 @@ def foodHeuristic(state, problem):
     value, try: problem.heuristicInfo['wallCount'] = problem.walls.count()
     Subsequent calls to this heuristic can access
     problem.heuristicInfo['wallCount']
+
+    Heuristic idea.
+    The heuristic used in cornersHeuristic() O(n^2) is invalidated by test food_heuristic_15.test, i.e.:
+        1. Add (manhattan) distance to the closest food from current pacman position,
+        2. Add (manhattan) distances to each remaining food (going to closest first) from the previous food.
+    Since greedily going to next closest food doesn't work (see food_heuristic_15.test), a more complex heuristic is devised:
+        1. Calculate min (manhattan) distance (to visit all food points) from each single remaining food location.
+        2. Pick next food that has minimum distance_to_food + distance_from_that_food_to_all_other_foods (calculated in step 1).
+    Such heuristic runs in O(n^4) runtime, and thus intermediate results are also cached to speed up execution (see minDistanceToVisitAListOfPoints()).
     """
     position, foodGrid = state
-    "*** YOUR CODE HERE ***"
-    return 0
+    foodList = foodGrid.asList()
+    # import pdb; pdb.set_trace()
+
+    totalDistance = 0
+    while len(foodList) != 0:
+        minDistance = 999999; minIndex = 0
+        for index, foodPosition in enumerate(foodList):
+            foodListWithoutCurrentFood = list(foodList)
+            foodListWithoutCurrentFood.pop(index)
+            distanceToFood = manhattanDistance(position, foodPosition)
+            distance = minDistanceToVisitAListOfPoints(foodListWithoutCurrentFood, foodPosition, problem) + distanceToFood
+            if(distance < minDistance):
+                minDistance = distance
+                minIndex = index
+                minDistanceToFood = distanceToFood
+
+        position = foodList.pop(minIndex)
+        totalDistance += minDistanceToFood
+
+    return totalDistance
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
