@@ -18,6 +18,16 @@ import random, util
 
 from game import Agent
 
+import sys
+sys.path.insert(0,'..')
+
+"""
+1. ReflexAgent:
+  tests: python autograder.py -q q1 --no-graphics
+  random ghosts: python pacman.py --frameTime 0 -p ReflexAgent -k 2 -l mediumClassic
+  out-to-get-you-ghosts: -g DirectionalGhost
+  maps: -l openClassic, testClassic, mediumClassic
+"""
 class ReflexAgent(Agent):
     """
       A reflex agent chooses an action at each choice point by examining
@@ -41,14 +51,24 @@ class ReflexAgent(Agent):
         # Collect legal moves and successor states
         legalMoves = gameState.getLegalActions()
 
+        gameState.currentClosestFood = getClosestObject(gameState.getPacmanPosition(), gameState.getFood().asList())
+        ghostsPositions = [ghostState.getPosition() for ghostState in gameState.getGhostStates()]
+        gameState.currentClosestGhost = getClosestObject(gameState.getPacmanPosition(), ghostsPositions)
+
         # Choose one of the best actions
         scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
+
+        # Add some randomness to the process of move selection, to avoid getting stuck behind the walls,
+        # when distance to the closest food pellet is not changing
+        if(coinToss(0.3)):
+            chosenIndex = random.randrange(0,len(scores))
+            scores[chosenIndex] += 1
+
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = random.choice(bestIndices) # Pick randomly among the best
 
-        "Add more of your code here if you want to"
-
+        # import pdb; pdb.set_trace()
         return legalMoves[chosenIndex]
 
     def evaluationFunction(self, currentGameState, action):
@@ -73,8 +93,39 @@ class ReflexAgent(Agent):
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
-        "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        additionalScore = 0
+        # 1. Does this new state gets us closer to the closest dot? +1 to stateScore if yes.
+        currentPos = currentGameState.getPacmanPosition()
+        currentDistanceToClosestFood = manhattanDistance(currentPos, currentGameState.currentClosestFood)
+        newDistanceToClosestFood = manhattanDistance(newPos, currentGameState.currentClosestFood)
+        if(newDistanceToClosestFood < currentDistanceToClosestFood):
+            additionalScore += 1
+
+        # 2. If closest ghost distance is <= 3, decrease stateScore
+        if(manhattanDistance(newPos, currentGameState.currentClosestGhost) <= 3):
+            additionalScore -= 2
+        if(manhattanDistance(newPos, currentGameState.currentClosestGhost) <= 1):
+            additionalScore -= 10
+
+        # Score calculation: -1 for the move, +10 for eating food, -500 if would get eaten by ghost
+        return successorGameState.getScore() + additionalScore
+
+
+def coinToss(p=.5):
+    return True if random.random() < p else False
+
+def getClosestObject(position, objects):
+    """
+      Get closest object, be it a food pellet, or a ghost
+    """
+    minDistance = 999999; minIndex = -1
+    for index, object in enumerate(objects):
+        distance = manhattanDistance(position, object)
+        if(distance < minDistance):
+            minDistance = distance
+            minIndex = index
+
+    return objects[minIndex]
 
 def scoreEvaluationFunction(currentGameState):
     """
