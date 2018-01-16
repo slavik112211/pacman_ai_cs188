@@ -15,7 +15,6 @@
 from util import manhattanDistance
 from game import Directions
 import random, util
-
 from game import Agent
 
 import sys
@@ -24,6 +23,7 @@ sys.path.insert(0,'..')
 """
 1. ReflexAgent:
   tests: python autograder.py -q q1 --no-graphics
+         python autograder.py -t test_cases/q2/0-small-tree
   random ghosts: python pacman.py --frameTime 0 -p ReflexAgent -k 2 -l mediumClassic
   out-to-get-you-ghosts: -g DirectionalGhost
   maps: -l openClassic, testClassic, mediumClassic
@@ -104,8 +104,9 @@ class ReflexAgent(Agent):
         # 2. If closest ghost distance is <= 3, decrease stateScore
         if(manhattanDistance(newPos, currentGameState.currentClosestGhost) <= 3):
             additionalScore -= 2
+
         if(manhattanDistance(newPos, currentGameState.currentClosestGhost) <= 1):
-            additionalScore -= 10
+            additionalScore -= 1
 
         # Score calculation: -1 for the move, +10 for eating food, -500 if would get eaten by ghost
         return successorGameState.getScore() + additionalScore
@@ -157,10 +158,54 @@ class MultiAgentSearchAgent(Agent):
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
 
+"""
+Q2.
+python pacman.py -p MinimaxAgent -l minimaxClassic -a depth=4
+-l openClassic mediumClassic
+python autograder.py -q q2
+
+"On larger boards such as openClassic and mediumClassic (the default), 
+you'll find Pacman to be good at not dying, but quite bad at winning. 
+He'll often thrash around without making progress. 
+Don't worry if you see this behavior, question 5 will clean up all of these issues."
+The reason for this behavior is that evaluation function doesn't take into account 
+which move will get it closer to the closest food.
+"""
 class MinimaxAgent(MultiAgentSearchAgent):
     """
       Your minimax agent (question 2)
     """
+
+    def maxValue(self, gameState, ply, agentIndex):
+        if(self.terminalState(gameState, ply)):
+            return self.evaluationFunction(gameState)
+
+        value = -999999
+        legalActions = gameState.getLegalActions(agentIndex)
+        for action in legalActions:
+            successorState = gameState.generateSuccessor(agentIndex, action)
+            value = max(value, self.minValue(successorState, ply, agentIndex+1))
+
+        return value
+
+    def minValue(self, gameState, ply, agentIndex):
+        # pdb.set_trace()
+        if(self.terminalState(gameState, ply)):
+            return self.evaluationFunction(gameState)
+
+        value = 999999
+        legalActions = gameState.getLegalActions(agentIndex)
+        for action in legalActions:
+            successorState = gameState.generateSuccessor(agentIndex, action)
+            if agentIndex+1 == gameState.getNumAgents():  # {0: "pacman", 1: "ghost1", 2: "ghost2"}, getNumAgents=3
+                value_new = self.maxValue(successorState, ply+1, 0)
+            else: value_new = self.minValue(successorState, ply, agentIndex+1)
+            value = min(value, value_new)
+
+        return value
+
+    def terminalState(self, gameState, ply):
+        return (not gameState.getLegalActions()) or (ply > self.depth)
 
     def getAction(self, gameState):
         """
@@ -179,8 +224,16 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # pdb.set_trace()
+        legalMoves = gameState.getLegalActions()
+        ply = 1; agentIndex = 0;
+        scores = [self.minValue(gameState.generateSuccessor(agentIndex, action), ply, agentIndex+1) for action in legalMoves]
+        bestScore = max(scores)
+        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
+        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+
+
+        return legalMoves[chosenIndex]
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
