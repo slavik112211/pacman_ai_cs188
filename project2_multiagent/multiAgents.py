@@ -11,7 +11,6 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-
 from util import manhattanDistance
 from game import Directions
 import random, util
@@ -20,6 +19,8 @@ from game import Agent
 import pdb
 import sys
 sys.path.insert(0,'..')
+import searchAgents
+import search
 
 """
 1. ReflexAgent:
@@ -374,36 +375,44 @@ def betterEvaluationFunction(currentGameState):
     """
       Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
       evaluation function (question 5).
-
-      DESCRIPTION: <write something here so we know what you did>
     """
     pacmanPos = currentGameState.getPacmanPosition()
     foodPos = currentGameState.getFood().asList()
-    closestFoodPos = getClosestObject(pacmanPos, foodPos) if len(foodPos) else 0
-    closestFoodDistance = manhattanDistance(pacmanPos, closestFoodPos) if len(foodPos) else 0
 
-    # Feature 1. Distance to closest food
+    # 1. Simple manhattan evaluation of distance to closest food doesn't take walls into account
+    closestFoodPos = getClosestObject(pacmanPos, foodPos) if len(foodPos) else 0
+    closestFoodDistance = 0 # manhattanDistance(pacmanPos, closestFoodPos)
+
+    # 2. Proper tree-search for the min-distance to closest food takes walls into account
+    if len(foodPos):
+        problem = searchAgents.PositionSearchProblem(currentGameState, start=pacmanPos, goal=closestFoodPos, warn=False, visualize=False)
+        closestFoodPath = search.aStarSearch(problem, searchAgents.manhattanHeuristic)
+        closestFoodDistance = len(closestFoodPath)
+
+    # Feature 1. Minimize the distance to closest food
     # closestFoodScore = 1 - normalizeByRange(10, 0, float(closestFoodDistance)) #Range: [0, 1]; 1=best; 0=worst.
     closestFoodScore = closestFoodDistance
 
-
-    # Feature 2. Number of food pellets
+    # Feature 2. Minimize the total number of food pellets
     # foodLeftScore = 1 - normalizeByRange(100, 0, float(len(foodPos)))
     foodLeftScore = len(foodPos)
 
-    # ghostsPositions = [ghostState.getPosition() for ghostState in gameState.getGhostStates()]
-    # gameState.currentClosestGhost = getClosestObject(gameState.getPacmanPosition(), ghostsPositions)
-    # Score calculation: -1 for the move, +10 for eating food, -500 if would get eaten by ghost
+    # Feature 3. Minimize the min-distance to all power-capsules
+    capsulePos = currentGameState.getCapsules()
+    allCapsuleMinDistance = searchAgents.minDistanceToVisitAListOfPoints(capsulePos, pacmanPos) if len(capsulePos) else 0
 
-
-    weight1 = 1; weight2 = -1; weight3 = -1
+    weight1 = 1; weight2 = -1; weight3 = -1; weight4 = -7;
     # print "score: "+str(weight1*currentGameState.getScore())+\
     #       "; closest food: "+str(weight2*closestFoodScore)+\
-    #       "; food left: "+str(weight3*foodLeftScore)+\
-    #       "; total: " + str(weight1*currentGameState.getScore() + weight2*closestFoodScore + weight3 * foodLeftScore)#
+    #       "; food left: "+str(weight3*foodLeftScore)+ \
+    #       "; closest capsule: "+str(weight4*allCapsuleMinDistance)+ \
+    #       "; total: " + str(weight1*currentGameState.getScore() + weight2*closestFoodScore +
+    #                         weight3 * foodLeftScore + weight4*allCapsuleMinDistance)
 
-    return weight1 * currentGameState.getScore() + weight2 * closestFoodScore + weight3 * foodLeftScore
-
+    # currentGameState.getScore() score calculation:
+    # -1 for the move, +10 for eating food, +200 for eating fleeing ghost, -500 if would get eaten by ghost
+    return weight1 * currentGameState.getScore() + weight2 * closestFoodScore+ \
+           weight3 * foodLeftScore + weight4 * allCapsuleMinDistance
 
 # Abbreviation
 better = betterEvaluationFunction
