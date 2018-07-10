@@ -63,6 +63,27 @@ def closestFood(pos, food, walls):
     # no food found
     return None
 
+def getClosestObject(position, objects):
+    """
+      Get closest object, be it a food pellet, or a ghost
+    """
+    if not objects: return None
+    minDistance = 999999; minIndex = -1
+    if len(objects) == 0: return 0
+    for index, object in enumerate(objects):
+        distance = util.manhattanDistance(position, object)
+        if(distance < minDistance):
+            minDistance = distance
+            minIndex = index
+
+    return objects[minIndex]
+
+def capsuleExists(capsules, position):
+    exists = False
+    for capsule in capsules:
+        if capsule == position: exists = True
+    return exists
+
 class SimpleExtractor(FeatureExtractor):
     """
     Returns simple features for a basic reflex Pacman:
@@ -76,11 +97,23 @@ class SimpleExtractor(FeatureExtractor):
         # extract the grid of food and wall locations and get the ghost locations
         food = state.getFood()
         walls = state.getWalls()
-        ghosts = state.getGhostPositions()
+        # ghosts = state.getGhostPositions()
+        capsules = state.getCapsules()
 
         features = util.Counter()
 
         features["bias"] = 1.0
+
+        ghostStates = state.getGhostStates()
+        fleeingGhostsPositions = []
+        ghosts = []
+
+        for ghostState in ghostStates:
+            if ghostState.scaredTimer > 0:
+                fleeingGhostsPositions.append(ghostState.getPosition())
+                features["eats-ghost"] = 1.0
+            else:
+                ghosts.append(ghostState.getPosition())
 
         # compute the location of pacman after he takes the action
         x, y = state.getPacmanPosition()
@@ -88,16 +121,40 @@ class SimpleExtractor(FeatureExtractor):
         next_x, next_y = int(x + dx), int(y + dy)
 
         # count the number of ghosts 1-step away
-        features["#-of-ghosts-1-step-away"] = sum((next_x, next_y) in Actions.getLegalNeighbors(g, walls) for g in ghosts)
+        if ghosts:
+            features["#-of-ghosts-1-step-away"] = sum((next_x, next_y) in Actions.getLegalNeighbors(g, walls) for g in ghosts)
+
+        # count the number of fleeing ghosts 1-step away
+        if fleeingGhostsPositions:
+            features["#-of-fleeing-ghosts-1-step-away"] = sum((next_x, next_y) in Actions.getLegalNeighbors(g, walls) for g in fleeingGhostsPositions)
 
         # if there is no danger of ghosts then add the food feature
         if not features["#-of-ghosts-1-step-away"] and food[next_x][next_y]:
             features["eats-food"] = 1.0
+
+        if not features["#-of-ghosts-1-step-away"] and capsuleExists(capsules, (next_x, next_y)):
+            features["eats-capsule"] = 1.0
 
         dist = closestFood((next_x, next_y), food, walls)
         if dist is not None:
             # make the distance a number less than one otherwise the update
             # will diverge wildly
             features["closest-food"] = float(dist) / (walls.width * walls.height)
+
+        closestCapsule = getClosestObject((x, y), capsules)
+        if closestCapsule is not None: 
+            closestCapsuleDistance = util.manhattanDistance((x, y), closestCapsule)
+            features["closest-capsule"] = float(closestCapsuleDistance) / (walls.width * walls.height)
+
+        # count the number of capsules 1-step away
+        if capsules:
+            features["#-of-capsules-1-step-away"] = sum((next_x, next_y) in Actions.getLegalNeighbors(c, walls) for c in capsules)
+
+
+        closestFleeingGhost = getClosestObject((x, y), fleeingGhostsPositions)
+        if closestFleeingGhost is not None: 
+            closestFleeingGhostDistance = util.manhattanDistance((x, y), closestFleeingGhost)
+            features["closest-fleeing-ghost"] = float(closestFleeingGhostDistance) / (walls.width * walls.height)
+
         features.divideAll(10.0)
         return features

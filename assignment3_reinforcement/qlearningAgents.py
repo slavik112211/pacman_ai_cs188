@@ -167,7 +167,7 @@ class PacmanQAgent(QLearningAgent):
         self.doAction(state,action)
         return action
 
-
+""" python pacman.py -p ApproximateQAgent -a extractor=SimpleExtractor -x 1000 -n 1010 -l capsuleClassic """
 class ApproximateQAgent(PacmanQAgent):
     """
        ApproximateQLearningAgent
@@ -208,6 +208,16 @@ class ApproximateQAgent(PacmanQAgent):
         features = self.featExtractor.getFeatures(state, action)
         for featureName, featureValue in features.items():
             self.weights[featureName] += self.alpha * qDifference * featureValue
+        # self.weights['eats-ghost']                      = 830
+        # self.weights['closest-food']                    = -132
+        # self.weights['#-of-capsules-1-step-away']       = 350
+        # self.weights['bias']                            = -161
+        # self.weights['eats-capsule']                    = 412
+        # self.weights['closest-fleeing-ghost']           = -24
+        # self.weights['#-of-ghosts-1-step-away']         = -3239
+        # self.weights['closest-capsule']                 = 34
+        # self.weights['#-of-fleeing-ghosts-1-step-away'] = 1345
+        # self.weights['eats-food']                       = 486
 
     def final(self, state):
         "Called at the end of each game."
@@ -218,5 +228,5 @@ class ApproximateQAgent(PacmanQAgent):
         if self.episodesSoFar == self.numTraining:
             # you might want to print your weights here for debugging
             "*** YOUR CODE HERE ***"
-            # print self.weights
+            print self.weights
             pass
